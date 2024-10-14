@@ -1,0 +1,87 @@
+FUNCTION QLearningMaze():
+    // Initialize the maze, start, sub-goal, and end goal positions
+    INITIALIZE maze, start_position, sub_goal_position, end_goal_position
+
+    // Define the action space: up, down, left, right
+    DEFINE actions AS [up, down, left, right]
+
+    // Set parameters
+    SET learning_rate (alpha)
+    SET discount_factor (gamma)
+    SET exploration_rate (epsilon)
+    SET number_of_episodes
+    SET max_steps_per_episode
+
+    // Initialize Q-table with zeros for all state-action pairs
+    INITIALIZE Q_table WITH zeros
+
+    // For each episode
+    FOR episode FROM 1 TO number_of_episodes DO
+        // Set the initial state to the start position
+        SET current_state TO start_position
+        SET subgoal_reached TO False
+        INITIALIZE visited_states AS an empty set
+        INITIALIZE episode_reward TO 0
+        INITIALIZE step_counter TO 0
+
+        // For each step in the episode
+        FOR step FROM 1 TO max_steps_per_episode DO
+            // Select an action using epsilon-greedy policy
+            SET action TO SELECT_ACTION(epsilon, Q_table, current_state)
+
+            // Calculate the next state based on the selected action
+            SET next_state TO GET_NEXT_STATE(current_state, action)
+
+            // If the next state is valid (within bounds and not a wall)
+            IF IS_VALID_STATE(next_state, maze) THEN
+                // If the agent revisits a state after reaching the sub-goal, apply a penalty
+                IF next_state IN visited_states AND subgoal_reached THEN
+                    SET reward TO reward - penalty
+                ELSE
+                    // Update visited states and calculate the reward based on the next state
+                    ADD next_state TO visited_states
+                    SET reward TO GET_REWARD(next_state)
+
+                    // If the sub-goal is reached
+                    IF next_state EQUALS sub_goal_position THEN
+                        SET subgoal_reached TO True
+                        INCREMENT reward BY 10
+                    ENDIF
+
+                    // If the final goal is reached
+                    IF next_state EQUALS end_goal_position THEN
+                        IF subgoal_reached THEN
+                            INCREMENT reward BY final_goal_reward
+                            INCREMENT success_count
+                            BREAK // End episode
+                        ELSE
+                            SET reward TO reward - penalty // Apply a penalty
+                        ENDIF
+                    ENDIF
+                ENDIF
+
+                // Update Q-value using the Q-learning update rule
+                Q_table[current_state][action] = Q_table[current_state][action] + alpha * (reward + gamma * MAX(Q_table[next_state]) - Q_table[current_state][action])
+
+                // Move to the next state and increment step counter
+                SET current_state TO next_state
+                INCREMENT step_counter
+
+            ELSE
+                // Apply a penalty for hitting a wall or going out of bounds
+                SET reward TO reward - penalty
+                // Update the Q-value for the invalid action
+                Q_table[current_state][action] = Q_table[current_state][action] + alpha * (reward - Q_table[current_state][action])
+
+            ENDIF
+        ENDFOR
+
+        // After all steps, update total rewards and steps for evaluation
+        UPDATE total_rewards, total_steps
+
+    ENDFOR
+
+    // Calculate and print success rate, average reward, and steps to goals
+    success_rate = success_count / number_of_episodes
+    PRINT success_rate, average_reward, average_steps
+END FUNCTION
