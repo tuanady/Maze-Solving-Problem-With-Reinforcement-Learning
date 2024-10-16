@@ -1,0 +1,152 @@
+# Initialize maze environment and parameters
+MAZE = [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1],   # 1 indicates walls, 0 indicates paths
+        [1, 0, 1, 0, 0, 0, 1, 0, 0, 1],
+        ...
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]]
+MAZE_SIZE = size of MAZE
+
+# Define start, sub-goal, and end goal positions
+START_POSITION = (1, 1)
+SUB_GOAL_POSITION = (5, 3)
+END_GOAL_POSITION = (7, 8)
+
+# Define possible actions (Up, Down, Left, Right)
+ACTIONS = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+GAMMA = 0.8  # Discount factor
+ALPHA = 0.1  # Learning rate
+EPSILON = 0.2  # Exploration rate
+EPISODES = 2000  # Number of episodes
+MAX_STEPS = 200  # Max steps per episode
+
+# Initialize Q-table and reward matrix
+Q = zero matrix of size (MAZE_SIZE, MAZE_SIZE, 2, len(ACTIONS))
+REWARD_MATRIX = fill with -1.0
+set REWARD_MATRIX[SUB_GOAL_POSITION] = 10.0
+set REWARD_MATRIX[END_GOAL_POSITION] = 500.0
+
+# Variables for tracking metrics
+success_count = 0
+total_rewards = 0
+total_steps_to_sub_goal = 0
+total_steps_to_end_goal = 0
+successful_episodes = 0
+learning_rates = []
+convergence_episodes = []
+rewards_per_episode = []
+success_rate_per_episode = []
+
+# Define function to choose the next action using epsilon-greedy policy
+FUNCTION epsilon_greedy(state):
+    IF random value < EPSILON:
+        RETURN random action index  # Explore
+    ELSE:
+        RETURN index of action with max Q value at state  # Exploit
+
+# Define function for Q-learning
+FUNCTION q_learning():
+    FOR episode FROM 1 TO EPISODES:
+        state = (START_POSITION)
+        visited_states = empty set
+        episode_reward = 0
+        steps_taken = 0
+        sub_goal_steps = 0
+        subgoal_reached = FALSE
+
+        FOR step FROM 1 TO MAX_STEPS:
+            action_idx = epsilon_greedy(state)
+            action = ACTIONS[action_idx]
+            next_x = state[0] + action[0]
+            next_y = state[1] + action[1]
+
+            IF next_state is valid (within bounds and not a wall):
+                IF subgoal_reached AND next_state in visited_states:
+                    reward = -100  # Penalty for revisiting
+                ELSE:
+                    ADD next_state to visited_states
+                    reward = REWARD_MATRIX[next_x, next_y]
+                    episode_reward += reward
+
+                    IF next_state == SUB_GOAL_POSITION AND NOT subgoal_reached:
+                        subgoal_reached = TRUE
+                        sub_goal_steps = steps_taken + 1
+                        total_steps_to_sub_goal += sub_goal_steps
+
+                    IF next_state == END_GOAL_POSITION:
+                        IF subgoal_reached:
+                            reward = 500.0
+                            success_count += 1
+                            successful_episodes += 1
+                            total_steps_to_end_goal += steps_taken + 1
+                            ADD episode to convergence_episodes
+                            BREAK
+
+                        ELSE:
+                            reward = -100.0  # Penalty for wrong order
+
+                # Q-learning update
+                best_next_action = index of action with max Q value at next_state
+                td_target = reward + GAMMA * Q[next_x, next_y, subgoal_reached, best_next_action]
+                td_delta = td_target - Q[state]
+                Q[state] += ALPHA * td_delta
+                ADD ALPHA * td_delta to learning_rates
+
+                state = (next_x, next_y, subgoal_reached)
+                steps_taken += 1
+
+                IF next_state == END_GOAL_POSITION AND subgoal_reached:
+                    BREAK
+            ELSE:
+                # Penalize for invalid move
+                Q[state] += ALPHA * (-100 + GAMMA * 0 - Q[state])
+
+        total_rewards += episode_reward
+        ADD episode_reward to rewards_per_episode
+        ADD success_rate for episode to success_rate_per_episode
+
+# Run Q-learning
+CALL q_learning()
+
+# Calculate evaluation metrics
+success_rate = success_count / EPISODES
+average_reward = total_rewards / EPISODES
+average_steps_to_sub_goal = total_steps_to_sub_goal / successful_episodes IF successful_episodes > 0 ELSE 0
+average_steps_to_end_goal = total_steps_to_end_goal / successful_episodes IF successful_episodes > 0 ELSE 0
+average_convergence_speed = mean of convergence_episodes IF convergence_episodes ELSE 0
+average_learning_rate = mean of learning_rates
+
+# Print evaluation results
+PRINT success rate, average reward, average steps to sub-goal, etc.
+
+# Function to extract optimal path
+FUNCTION extract_q_path(start, goal):
+    state = (start)
+    path = [(start[0], start[1])]
+    
+    FOR step FROM 1 TO MAX_STEPS:
+        action_idx = index of action with max Q value at state
+        action = ACTIONS[action_idx]
+        next_x = state[0] + action[0]
+        next_y = state[1] + action[1]
+        subgoal_reached = state[2]
+
+        IF next_state is valid:
+            IF next_state == SUB_GOAL_POSITION:
+                subgoal_reached = TRUE
+            state = (next_x, next_y, subgoal_reached)
+            APPEND (next_x, next_y) to path
+        ELSE:
+            BREAK  # Stop if invalid move
+        
+        IF next_state == goal AND subgoal_reached:
+            BREAK  # Stop if goal is reached
+
+    RETURN path
+
+# Extract the path from start to end goal
+full_path = CALL extract_q_path(START_POSITION, END_GOAL_POSITION)
+
+# Print the optimal path
+PRINT full_path
+
+# Visualize the learning curve
+PLOT rewards_per_episode and success_rate_per_episode
