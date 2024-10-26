@@ -7,6 +7,8 @@ This repository contains the following files:
 
 - `Pseudocode_q-learning.txt`: A text file with the pseudocode template for the Q-learning implementation. It outlines the algorithmic steps taken in the Python code, offering an overview of the Q-learning logic applied to the maze environment.
 
+- `Pseudocode_value-iteration.txt`: A text file with the pseudocode template for the value iteration implementation. It outlines the algorithmic steps for calculating and iteratively updating the value function across states, providing an overview of the logic used to derive the optimal policy in a maze environment with a fully known model.
+
 - `value_iteration.ipynb`: A Jupyter Notebook implementing the value iteration algorithm for solving the same maze. Here, the agent calculates the long-term expected reward for each state using the Bellman equation, and iteratively updates values until they converge, allowing the agent to derive an optimal policy.
 
 
