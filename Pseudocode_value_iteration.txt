@@ -1,0 +1,176 @@
+# Import necessary libraries
+IMPORT numpy AS np
+IMPORT matplotlib.pyplot AS plt
+
+# Define the maze environment as a 2D array
+INITIALIZE maze AS 2D array with 1s and 0s
+
+# Define maze size
+SET MAZE_SIZE TO number of rows in maze
+
+# Define start, sub-goal, and end goal positions
+SET start_position TO (1, 1)
+SET sub_goal_position TO (5, 3)
+SET end_goal_position TO (7, 8)
+
+# Define possible actions (up, down, left, right)
+SET actions TO [(-1, 0), (1, 0), (0, -1), (0, 1)]
+SET gamma TO 0.8  # Discount factor
+SET theta TO 1e-5  # Convergence threshold
+
+# Initialize the value function as a 2D array of zeros
+INITIALIZE value_function AS 2D array of zeros
+
+# Initialize reward matrix
+INITIALIZE reward_matrix AS 2D array of -1.0
+SET reward_matrix[sub_goal_position] TO 10.0  # Reward for sub-goal
+SET reward_matrix[end_goal_position] TO 500.0  # Reward for end goal
+
+FUNCTION is_valid_move(x, y):
+    # Check if (x, y) is within maze bounds and is an open path
+    RETURN (0 <= x < MAZE_SIZE AND 0 <= y < MAZE_SIZE AND maze[x, y] == 0)
+
+FUNCTION value_iteration():
+    SET global value_function
+    SET convergence_iterations TO 0  # Initialize count
+    
+    WHILE TRUE:
+        SET delta TO 0  # Initialize maximum change
+        INCREMENT convergence_iterations
+        
+        FOR x FROM 0 TO MAZE_SIZE:
+            FOR y FROM 0 TO MAZE_SIZE:
+                IF maze[x, y] == 0:
+                    SET v TO value_function[x, y]  # Store current value
+                    INITIALIZE action_values AS empty list
+                    
+                    FOR EACH action IN actions:
+                        SET next_x TO x + action[0]
+                        SET next_y TO y + action[1]
+                        
+                        IF is_valid_move(next_x, next_y):
+                            SET action_value TO reward_matrix[next_x, next_y] + gamma * value_function[next_x, next_y]
+                        ELSE:
+                            SET action_value TO -100.0  # Penalty for hitting a wall
+                        
+                        APPEND action_value TO action_values
+                    
+                    # Update value function
+                    SET value_function[x, y] TO max(action_values)
+                    # Update delta for convergence check
+                    SET delta TO max(delta, abs(v - value_function[x, y]))
+
+        # Check for convergence
+        IF delta < theta:
+            BREAK
+
+    RETURN convergence_iterations  # Return number of iterations
+
+FUNCTION extract_policy():
+    INITIALIZE policy AS 2D array of -1
+    FOR x FROM 0 TO MAZE_SIZE:
+        FOR y FROM 0 TO MAZE_SIZE:
+            IF maze[x, y] == 0:
+                INITIALIZE action_values AS empty list
+                
+                FOR EACH action IN actions:
+                    SET next_x TO x + action[0]
+                    SET next_y TO y + action[1]
+                    
+                    IF is_valid_move(next_x, next_y):
+                        SET action_value TO reward_matrix[next_x, next_y] + gamma * value_function[next_x, next_y]
+                    ELSE:
+                        SET action_value TO -100.0  # Penalty
+                    
+                    APPEND action_value TO action_values
+                
+                # Find the best action
+                SET best_action TO index of max(action_values)
+                SET policy[x, y] TO best_action
+
+    RETURN policy
+
+FUNCTION extract_v_path(start, goal, optimal_policy):
+    SET state TO start
+    INITIALIZE path AS empty list
+    APPEND state TO path
+    SET steps_to_sub_goal TO 0
+    SET steps_to_end_goal TO 0
+    
+    WHILE state != goal:
+        SET action_idx TO optimal_policy[state[0], state[1]]
+        SET action TO actions[action_idx]
+        SET next_x TO state[0] + action[0]
+        SET next_y TO state[1] + action[1]
+        
+        IF is_valid_move(next_x, next_y):
+            SET state TO (next_x, next_y)
+            APPEND state TO path
+            
+            IF state == sub_goal_position:
+                SET steps_to_sub_goal TO length of path
+            IF state == end_goal_position:
+                SET steps_to_end_goal TO length of path
+        ELSE:
+            BREAK  # Invalid move
+
+    RETURN path, steps_to_sub_goal, steps_to_end_goal
+
+FUNCTION evaluate_agent(trials):
+    INITIALIZE success_count, total_reward, total_steps_to_sub_goal, total_steps_to_end_goal, total_convergence_speed, best_path
+    INITIALIZE rewards_per_episode AS empty list
+    INITIALIZE success_rates AS empty list
+    
+    FOR episode FROM 0 TO trials:
+        RESET value_function TO 2D array of zeros
+        SET convergence_speed TO value_iteration()
+        SET optimal_policy TO extract_policy()
+        
+        SET full_v_path, steps_to_sub_goal, steps_to_end_goal TO extract_v_path(start_position, end_goal_position, optimal_policy)
+
+        IF full_v_path AND steps_to_end_goal > 0:
+            INCREMENT success_count
+            ADD reward_matrix[end_goal_position] TO total_reward
+            ADD steps_to_sub_goal TO total_steps_to_sub_goal
+            ADD steps_to_end_goal TO total_steps_to_end_goal
+            ADD convergence_speed TO total_convergence_speed
+            
+            SET best_path TO full_v_path
+        
+        # Track rewards and success rates
+        APPEND total_reward TO rewards_per_episode
+        APPEND success_count / (episode + 1) * 100 TO success_rates  # Convert to percentage
+
+    # Calculate metrics
+    SET success_rate TO (success_count / trials) * 100
+    SET average_reward TO total_reward / success_count IF success_count > 0 ELSE 0
+    SET average_steps_to_sub_goal TO total_steps_to_sub_goal / success_count IF success_count > 0 ELSE 0
+    SET average_steps_to_end_goal TO total_steps_to_end_goal / success_count IF success_count > 0 ELSE 0
+    SET average_convergence_speed TO total_convergence_speed / trials
+
+    RETURN success_rate, average_reward, average_steps_to_sub_goal, average_steps_to_end_goal, average_convergence_speed, best_path, rewards_per_episode, success_rates
+
+FUNCTION visualize_path(path, title):
+    CREATE a new plot
+    PLOT maze using grayscale
+    FOR EACH (x, y) IN path:
+        PLACE marker on plot at (x, y)
+    PLACE markers for start, sub-goal, and end goal
+    SET plot title
+    SHOW plot
+
+# Main execution
+IF __name__ == "__main__":
+    SET trials TO 100
+    CALL evaluate_agent(trials) AND STORE RESULTS
+
+    PRINT success_rate, average_reward, avg_steps_to_sub_goal, avg_steps_to_end_goal, avg_convergence_speed
+
+    # Visualize the optimal path
+    CALL visualize_path(best_path, "Optimal Path from Start to End Goal")
+
+    # Plot learning curve
+    CREATE a new plot for learning curve
+    PLOT rewards_per_episode AND success_rates
+    SET x and y labels
+    SHOW plot
