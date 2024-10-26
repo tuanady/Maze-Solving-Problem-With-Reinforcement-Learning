@@ -1,1 +1,10 @@
 # Maze Solving Problem With Reinforcement Learning 
+This project explores the implementation of Q-learning and Value Iteration algorithms in a 10x10 maze environment, designed to train an agent to navigate efficiently toward multiple objectives. By applying reinforcement learning, the agent learns an optimal path that reaches a sub-goal before continuing to a final goal, reinforcing both exploration and exploitation strategies.
+
+This repository contains the following files:
+
+- `q_learning.ipynb`: A Python implementation of the Q-learning algorithm applied to a maze environment. The agent learns by interacting with the environment, aiming to maximize its cumulative reward. A structured reward and penalty system ensures effective learning and encourages the agent to reach intermediate goals.
+
+- `Pseudocode_q-learning.txt`: A text file with the pseudocode template for the Q-learning implementation. It outlines the algorithmic steps taken in the Python code, offering an overview of the Q-learning logic applied to the maze environment.
+
+- `value_iteration.ipynb`: A Python implementation of the value iteration algorithm for solving the same maze. Here, the agent calculates the long-term expected reward for each state using the Bellman equation, and iteratively updates values until they converge, allowing the agent to derive an optimal policy.
